@@ -1,6 +1,6 @@
 from freqtrade.strategy import IStrategy
 from pandas import DataFrame
-from followsm import FollowSM
+from followsm import FollowSMClient
 
 class ToxicityProtectedStrategy(IStrategy):
     """
@@ -15,15 +15,15 @@ class ToxicityProtectedStrategy(IStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         # Unauthenticated client (30 req/min free tier rate limit)
-        self.followsm_client = FollowSM()
+        self.followsm_client = FollowSMClient()
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         try:
             symbol = metadata['pair'].replace('/', '')
-            metrics = self.followsm_client.get_market_metrics(symbol)
+            snapshot = self.followsm_client.get_toxicity_snapshot(symbol)
             
-            vpin = metrics.get('vpin', 0.0)
-            ob_toxicity = metrics.get('ob_toxicity_1pct', 1.0)
+            vpin = getattr(snapshot, 'vpin', 0.0)
+            ob_toxicity = getattr(snapshot, 'ob_toxicity_1pct', 1.0)
             
             dataframe['vpin'] = vpin
             dataframe['ob_toxicity'] = ob_toxicity
